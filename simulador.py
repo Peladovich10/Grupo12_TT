@@ -1,4 +1,5 @@
 import csv
+import os
 import sys
 
 # Forzar la entrada y salida estándar de la consola a UTF-8
@@ -395,9 +396,42 @@ def ejecutar_procesos_defecto():
     ejecutar_simulacion("procesos_defecto.csv")
 
 def cargar_archivo_csv():
-    """Solicita la ruta de un archivo CSV personalizado y ejecuta la simulación."""
-    ruta = input("\nIngrese la ruta del archivo .csv: ").strip()
-    ejecutar_simulacion(ruta)
+    """Muestra los CSV disponibles en la carpeta raíz y permite elegir uno por número."""
+    ruta_base = os.path.dirname(os.path.abspath(__file__))
+    csv_disponibles = []
+
+    for nombre in sorted(os.listdir(ruta_base)):
+        if nombre.lower().endswith(".csv") and nombre != "procesos_defecto.csv":
+            csv_disponibles.append(nombre)
+
+    if not csv_disponibles:
+        print("\nNo se encontraron archivos .csv adicionales en la carpeta raíz del proyecto.")
+        print("Puede agregar un archivo CSV nuevo en la misma carpeta y volver a intentarlo.")
+        return
+
+    print("\nIngresar el número del .csv que desea ejecutar")
+    for i, nombre in enumerate(csv_disponibles, start=1):
+        print(f"{i}) {nombre}")
+
+    while True:
+        opcion_csv = input("\nSeleccione un archivo (1-{}): ".format(len(csv_disponibles))).strip()
+
+        if opcion_csv.lower() in {"", "salir", "cancelar"}:
+            print("\nSelección cancelada.")
+            return
+
+        try:
+            indice = int(opcion_csv) - 1
+        except ValueError:
+            print("Entrada inválida. Debe ingresar un número válido.")
+            continue
+
+        if 0 <= indice < len(csv_disponibles):
+            ruta = os.path.join(ruta_base, csv_disponibles[indice])
+            ejecutar_simulacion(ruta)
+            return
+
+        print(f"Número fuera de rango. Debe elegir entre 1 y {len(csv_disponibles)}.")
 
 def mostrar_menu():
     while True:

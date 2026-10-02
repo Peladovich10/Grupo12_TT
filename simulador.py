@@ -7,6 +7,28 @@ if sys.stdout.encoding != "utf-8":
 if sys.stdin.encoding != "utf-8":
     sys.stdin.reconfigure(encoding="utf-8")
 
+def pausar_simulacion():
+    """Pausa la ejecución y espera a que el usuario presione Enter."""
+    print("Presionar ENTER para continuar")
+    input()
+
+def imprimir_leyendas_globales():
+    """Imprime las referencias de las tablas una sola vez antes de iniciar la simulación."""
+    print("\n--- REFERENCIAS TABLA GENERAL DE PROCESOS---")
+    print("ID         : Identificador único del proceso")
+    print("TA         : Tiempo de arribo al sistema")
+    print("TI         : Tiempo de irrupción (duración total del proceso)")
+    print("TI_REST    : Tiempo de irrupción restante")
+    print("TAM(Kb)    : Tamaño en kilobytes del proceso")
+    print("EST        : Estado actual del proceso")
+
+    print("\n--- REFERENCIAS TABLA DE MEMORIA ---")
+    print("ID_PART     : Identificador de la partición de memoria")
+    print("DIR_INICIO  : Dirección de memoria donde inicia la partición (K)")
+    print("TAM_PART(Kb): Tamaño total de la partición en KB")
+    print("ID_PROC     : ID del proceso asignado a la partición ('Libre' si está vacía)")
+    print("FRAG_EXTERNA: Espacio libre contiguo restante fuera de la partición")
+
 class GestorMemoria:
 
     def __init__(
@@ -130,6 +152,18 @@ def imprimir_leyenda_tabla_memoria():
         "FRAG_EXTERNA: Espacio libre contiguo restante fuera de la partición"
     )
 
+def estado_legible(est):
+    """Devuelve el nombre completo del estado para mostrar en la tabla."""
+    mapa = {
+        "N": "Nuevo",
+        "S": "Listo y Suspendido",
+        "L": "Listo",
+        "E": "En Ejecución",
+        "F": "Finalizado",
+        "-": "-",
+    }
+    return mapa.get(est, est)
+
 def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
     """Muestra el estado del sistema cuando ocurre un evento relevante."""
     print("\n" + "=" * 80)
@@ -138,22 +172,20 @@ def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
 
     # 1. TABLA GENERAL DE PROCESOS
     print("\n[TABLA GENERAL DE PROCESOS]")
-    imprimir_leyenda_tabla_general()
     print("-" * 80)
     print(
-        f"{'ID':<5} | {'TA':<5} | {'TI':<5} | {'TI_REST':<8} | {'TAM(Kb)':<8} | {'EST':<5}"
+        f"{'ID':<5} | {'TA':<5} | {'TI':<5} | {'TI_REST':<8} | {'TAM(Kb)':<8} | {'EST':<20}"
     )
     print("-" * 80)
 
     for p in procesos:
         print(
-            f"{p['id']:<5} | {p['ta']:<5} | {p['ti']:<5} | {p['ti_rest']:<8} | {p['tam']:<8} | {p['est']:<5}"
+            f"{p['id']:<5} | {p['ta']:<5} | {p['ti']:<5} | {p['ti_rest']:<8} | {p['tam']:<8} | {estado_legible(p['est']):<20}"
         )
     print("-" * 80)
 
     # 2. TABLA DE MEMORIA
     print("\n[TABLA DE MEMORIA - PARTICIONES VARIABLES]")
-    imprimir_leyenda_tabla_memoria()
     print("-" * 80)
     print(
         f"{'ID_PART':<8} | {'DIR_INICIO':<10} | {'TAM_PART(Kb)':<12} | {'ID_PROC':<8} | {'FRAG_EXTERNA':<12}"
@@ -171,6 +203,8 @@ def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
             f"{part['id_part']:<8} | {part['dir_inicio']:<10} | {part['tam']:<12} | {id_proc_str:<8} | {frag_str:<12}"
         )
     print("-" * 80)
+
+    pausar_simulacion()
 
 def cargar_procesos_desde_csv(ruta_csv):
     """Lee un archivo CSV y devuelve una lista de diccionarios de procesos."""
@@ -236,11 +270,8 @@ def mostrar_informe_estadistico(procesos, tiempo_total):
 def simular_srtf_y_memoria(procesos, ruta_csv):
     memoria = GestorMemoria(tam_total=450, dir_inicio=100)
 
-    # Métricas de cálculo de retornos y esperas
-    # p dict extras: 'tiempo_fin', 'retorno', 'espera'
-
     cola_nuevos = [p for p in procesos]
-    cola_nuevos.sort(key=lambda x: x["ta"])  # Ordenar por tiempo de arribo
+    cola_nuevos.sort(key=lambda x: x["ta"])
 
     cola_listos = []
     cola_listos_suspendidos = []
@@ -250,9 +281,9 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
     procesos_completados = 0
     total_procesos = len(procesos)
 
-    print(
-        f"\n========== INICIANDO SIMULACIÓN DESDE '{ruta_csv}' ==========\n"
-    )
+    imprimir_leyendas_globales()
+
+    print(f"\n========== INICIANDO SIMULACIÓN DESDE '{ruta_csv}' ==========")
 
     while procesos_completados < total_procesos:
         hubo_evento = False

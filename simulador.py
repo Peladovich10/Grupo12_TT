@@ -393,7 +393,9 @@ def ejecutar_simulacion(ruta_csv):
 
 def ejecutar_procesos_defecto():
     """Ejecuta la simulación utilizando el archivo por defecto."""
-    ejecutar_simulacion("procesos_defecto.csv")
+    ruta_base = os.path.dirname(os.path.abspath(__file__))
+    ruta_csv = os.path.join(ruta_base, "procesos_defecto.csv")
+    ejecutar_simulacion(ruta_csv)
 
 def cargar_archivo_csv():
     """Muestra los CSV disponibles en la carpeta raíz y permite elegir uno por número."""

@@ -163,10 +163,11 @@ def estado_legible(est):
     }
     return mapa.get(est, est)
 
-def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
+def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria, plural=False):
     """Muestra el estado del sistema cuando ocurre un evento relevante."""
     print("\n" + "=" * 80)
-    print(f" TIEMPO t = {tiempo} | EVENTO: {evento_msg}")
+    etiqueta = "EVENTOS" if plural else "EVENTO"
+    print(f" TIEMPO t = {tiempo} | {etiqueta}: {evento_msg}")
     print("=" * 80)
 
     print("\n[TABLA GENERAL DE PROCESOS]")
@@ -265,6 +266,7 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
     cola_listos = []
     cola_listos_suspendidos = []
     proceso_en_ejecucion = None
+    mensaje_fin_pendiente = None
 
     tiempo_actual = 0
     procesos_completados = 0
@@ -276,6 +278,13 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
     while procesos_completados < total_procesos:
         hubo_evento = False
         mensajes_evento = []
+
+        # Si un proceso finalizó al cierre del instante anterior, su evento
+        # pertenece a este mismo instante y se muestra junto con los demás.
+        msg_fin_instante = mensaje_fin_pendiente
+        mensaje_fin_pendiente = None
+        if msg_fin_instante:
+            hubo_evento = True
 
         arribos_hoy = [p for p in cola_nuevos if p["ta"] == tiempo_actual]
         for p in arribos_hoy:
@@ -350,11 +359,17 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
 
         if hubo_evento:
             msg_unificado = " | ".join(mensajes_evento)
+            if msg_fin_instante:
+                if msg_unificado:
+                    msg_unificado = msg_fin_instante + "\n" + msg_unificado
+                else:
+                    msg_unificado = msg_fin_instante
             mostrar_tablas_evento(
                 tiempo_actual,
                 msg_unificado,
                 procesos,
                 memoria.obtener_tabla_memoria_salida(),
+                plural=bool(msg_fin_instante) and bool(mensajes_evento) or len(mensajes_evento) > 1,
             )
 
         tiempo_actual += 1
@@ -371,15 +386,17 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
                 memoria.liberar_memoria(proceso_en_ejecucion["id"])
                 procesos_completados += 1
 
-                msg_fin = f"Proceso P{proceso_en_ejecucion['id']} FINALIZÓ (F) -> Memoria Liberada"
+                mensaje_fin_pendiente = f"Proceso P{proceso_en_ejecucion['id']} FINALIZÓ (F) -> Memoria Liberada"
                 proceso_en_ejecucion = None
 
-                mostrar_tablas_evento(
-                    tiempo_actual,
-                    msg_fin,
-                    procesos,
-                    memoria.obtener_tabla_memoria_salida(),
-                )
+    # Si el último proceso finalizó, no hay otra iteración que lo muestre.
+    if mensaje_fin_pendiente:
+        mostrar_tablas_evento(
+            tiempo_actual,
+            mensaje_fin_pendiente,
+            procesos,
+            memoria.obtener_tabla_memoria_salida(),
+        )
 
     mostrar_informe_estadistico(procesos, tiempo_actual)
 
@@ -393,9 +410,7 @@ def ejecutar_simulacion(ruta_csv):
 
 def ejecutar_procesos_defecto():
     """Ejecuta la simulación utilizando el archivo por defecto."""
-    ruta_base = os.path.dirname(os.path.abspath(__file__))
-    ruta_csv = os.path.join(ruta_base, "procesos_defecto.csv")
-    ejecutar_simulacion(ruta_csv)
+    ejecutar_simulacion("procesos_defecto.csv")
 
 def cargar_archivo_csv():
     """Muestra los CSV disponibles en la carpeta raíz y permite elegir uno por número."""

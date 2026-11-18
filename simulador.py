@@ -181,17 +181,6 @@ def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
             )
     print("-" * 80)
 
-    print("\n[TABLA GENERAL DE PROCESOS]")
-    print("-" * 80)
-    print(f"{'ID':<5} | {'TA':<5} | {'TI':<5} | {'TI_REST':<8} | {'TAM(Kb)':<8} | {'EST':<20}")
-    print("-" * 80)
-
-    for p in procesos:
-        print(
-            f"{p['id']:<5} | {p['ta']:<5} | {p['ti']:<5} | {p['ti_rest']:<8} | {p['tam']:<8} | {estado_legible(p['est']):<20}"
-        )
-    print("-" * 80)
-
     print("\n[TABLA DE MEMORIA - PARTICIONES VARIABLES]")
     print("-" * 80)
     print(f"{'ID_PART':<8} | {'DIR_INICIO':<10} | {'TAM_PART(Kb)':<12} | {'ID_PROC':<8} | {'FRAG_EXTERNA':<12}")
@@ -207,6 +196,8 @@ def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
 
         frag_str = f"{part['frag_ext']}K" if part["frag_ext"] is not None else "-"
         print(
+            f"{part['id']:<8} | {part['dir_inicio']:<10} | {part['tam']:<12} | {id_proc_str:<8} | {frag_str:<12}"
+            if "id" in part else
             f"{part['id_part']:<8} | {part['dir_inicio']:<10} | {part['tam']:<12} | {id_proc_str:<8} | {frag_str:<12}"
         )
     print("-" * 80)

@@ -170,7 +170,8 @@ def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria, plu
     """Muestra el estado del sistema cuando ocurre un evento relevante."""
     print("\n" + "=" * 80)
     etiqueta = "EVENTOS" if plural else "EVENTO"
-    print(f" TIEMPO t = {tiempo} | {etiqueta}: {evento_msg}")
+    eventos_indentados = "\n".join(f"    {linea}" for linea in evento_msg.splitlines())
+    print(f" TIEMPO t = {tiempo}\n {etiqueta}:\n{eventos_indentados}")
     print("=" * 80)
 
     print("\n[TABLA GENERAL DE PROCESOS]")

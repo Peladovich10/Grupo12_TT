@@ -1,93 +1,140 @@
-## Simulador de Memoria y Planificación de Procesos
+# HowTo - Simulador de Asignación de Memoria y Planificación de Procesos
 
-Trabajo Práctico Integrador de la materia Sistemas Operativos.
+**Grupo 12** — Integrantes:
 
-El proyecto consiste en el desarrollo de un simulador en Python que representa la administración de memoria y la planificación de procesos dentro de un sistema operativo.
+Simulador de un sistema monoprocesador con memoria de **particiones variables (MVT)**, política de asignación **Best-Fit** y planificación de CPU **SRTF**.
 
-Actualmente el simulador permite trabajar con distintos lotes de procesos almacenados en archivos CSV y observar cómo van cambiando sus estados, la asignación de memoria y el uso de la CPU durante la ejecución.
+## Contenido del paquete
 
-## Características principales
+```
+Grupo12_TT/
+├── simulador.py            Programa (código fuente, se ejecuta con Python)
+├── procesos_defecto.csv    Lote que se ejecuta con la opción 1 del menú
+├── lote1.csv ... lote6.csv Lotes de prueba
+└── README.md               Esta guía
+```
 
-El simulador implementa:
+> Los `.csv` deben estar **en la misma carpeta** que `simulador.py`.
 
-- Gestión de memoria mediante particiones variables.
-- Asignación de memoria utilizando el algoritmo Best-Fit.
-- Planificación de CPU mediante SRTF.
-- Manejo de los estados nuevo, listo, listo/suspendido, en ejecución y finalizado.
-- Un máximo de cinco procesos admitidos simultáneamente en el sistema.
-- 100 KB de memoria reservados para el Sistema Operativo y 450 KB disponibles para los procesos.
-- División de huecos libres cuando un proceso ocupa solo una parte de una partición.
-- Liberación de memoria cuando un proceso finaliza.
-- Unificación de huecos libres contiguos.
-- Expropiación de CPU cuando SRTF encuentra un proceso con menor tiempo restante.
-- Visualización del estado general del sistema durante los eventos importantes de la simulación.
-- Visualización de la tabla de procesos y de la distribución de memoria.
-- Cálculo del tiempo de retorno y del tiempo de espera de cada proceso.
-- Cálculo de los promedios de retorno y espera.
-- Cálculo del rendimiento general del sistema.
+## Parámetros de la simulación
 
-## Archivos de procesos
+| Parámetro | Valor |
+|---|---|
+| Memoria para el Sistema Operativo | 100K (direcciones 0 a 100) |
+| Memoria para procesos de usuario | 450K (direcciones 100 a 550) |
+| Máximo de procesos por lote | 10 |
+| Máximo de procesos en Ejecución + Listos + Listos y Suspendidos | 5 |
+| Asignación de memoria | Best-Fit (hueco libre más justo) |
+| Planificación de CPU | SRTF (con apropiación) |
+| Estados | Nuevo, Listo, Listo y Suspendido, En Ejecución, Finalizado |
 
-Los procesos se cargan mediante archivos CSV.
+## Requisitos
 
-Cada proceso contiene:
+* Python 3.7 o superior (no requiere instalar librerías externas).
+* `simulador.py` y los `.csv` en la misma carpeta.
 
-- Identificador.
-- Tiempo de arribo.
-- Tiempo de irrupción.
-- Tamaño requerido en memoria.
-
-El programa permite ejecutar un conjunto de procesos cargado por defecto o seleccionar otro archivo CSV disponible dentro de la carpeta del proyecto.
-
-## Funcionamiento general
-
-Durante la simulación se administran distintas colas según el estado de cada proceso.
-
-Los procesos pueden pasar por los siguientes estados:
-
-- Nuevo.
-- Listo.
-- Listo/Suspendido.
-- En Ejecución.
-- Finalizado.
-
-Cuando llega un proceso, el simulador intenta asignarle memoria utilizando Best-Fit. Si puede ingresar al sistema, pasa a la cola de Listos. En caso contrario permanece en Listo/Suspendido hasta que pueda ser admitido.
-
-La CPU utiliza SRTF para seleccionar el proceso con menor tiempo de ejecución restante. Si aparece un proceso con menor tiempo restante que el que se encuentra ejecutando, este puede ser desplazado y regresar a la cola de Listos.
-
-Cuando un proceso termina, se libera la memoria que ocupaba y se unifican los huecos libres que hayan quedado contiguos.
-
-## Visualización
-
-Durante los eventos relevantes se muestra información sobre:
-
-- Tiempo actual de la simulación.
-- Evento ocurrido.
-- Datos de los procesos.
-- Tiempo restante de ejecución.
-- Estado actual de cada proceso.
-- Distribución de las particiones de memoria.
-- Procesos asignados a memoria.
-
-La ejecución se pausa en estos puntos hasta que el usuario presiona ENTER.
-
-## Informe final
-
-Una vez finalizados todos los procesos, el simulador presenta un informe estadístico con:
-
-- Tiempo de finalización de cada proceso.
-- Tiempo de retorno.
-- Tiempo de espera.
-- Tiempo promedio de retorno.
-- Tiempo promedio de espera.
-- Rendimiento del sistema.
+Para verificar la instalación: `python --version` (en Windows también puede usarse `py --version`).
 
 ## Ejecución
 
-El programa principal se ejecuta desde Python.
+1. Abrir una terminal en la carpeta del proyecto.
+2. Ejecutar:
 
-Al iniciar, se presenta un menú desde el cual se puede:
+   ```
+   python simulador.py
+   ```
 
-- Ejecutar los procesos cargados por defecto.
-- Seleccionar otro archivo CSV.
-- Salir del programa.
+   (en Windows, si `python` no es reconocido: `py simulador.py`)
+
+3. Aparece el menú:
+
+   ```
+   1) Ejecutar procesos cargados por defecto.
+   2) Cargar archivo .csv con los procesos.
+   3) Salir
+   ```
+
+   * **Opción 1:** ejecuta `procesos_defecto.csv`.
+   * **Opción 2:** lista los `.csv` de la carpeta (excepto `procesos_defecto.csv`); se elige uno ingresando su número. Si se presiona solo ENTER se cancela la selección.
+   * **Opción 3:** sale del programa.
+
+## Formato del archivo de procesos
+
+Archivo CSV separado por comas, con esta primera línea de encabezado (exactamente):
+
+```
+ID,TA,TI,TAM(Kb)
+```
+
+| Columna | Significado |
+|---|---|
+| `ID` | Identificador del proceso |
+| `TA` | Tiempo de arribo |
+| `TI` | Tiempo de irrupción (duración total en CPU) |
+| `TAM(Kb)` | Tamaño en memoria, en K |
+
+Ejemplo:
+
+```
+ID,TA,TI,TAM(Kb)
+1,0,5,200
+2,1,3,150
+3,2,4,30
+```
+
+Reglas de validación al cargar el archivo:
+
+* Se admiten como máximo **10 procesos**; los demás se ignoran y se informa cuáles.
+* Un proceso que pide **más de 450K** nunca podría cargarse: se descarta con un aviso.
+* Se descartan procesos con datos inválidos (`TA < 0`, `TI <= 0` o `TAM <= 0`).
+* Los procesos descartados o ignorados **no aparecen** en el informe final ni en los promedios.
+
+## Desarrollo de la simulación
+
+La simulación **no corre de forma ininterrumpida**: se detiene y muestra el estado del sistema cada vez que ocurre un evento (arribo de un proceso, finalización, asignación de CPU, apropiación SRTF o carga a memoria de un proceso suspendido). Para continuar se presiona **ENTER**.
+
+En cada pausa se muestra:
+
+* **Instante de tiempo (`t`)** y el/los eventos ocurridos.
+* **Tabla general de procesos:** ID, TA, TI, tiempo de irrupción restante (`TI_REST`), tamaño y estado. El proceso con estado _En Ejecución_ es el que ocupa la CPU; los estados _Listo_, _Listo y Suspendido_ y _Nuevo_ indican a qué cola pertenece cada proceso.
+* **Tabla de memoria:** ID de partición, dirección de inicio, tamaño, proceso asignado (`Libre` si está vacía) y fragmentación. La primera fila corresponde al Sistema Operativo.
+
+### Estados de los procesos
+
+| Estado | Significado |
+|---|---|
+| Nuevo | Ya arribó pero el sistema está completo (5 procesos); espera para ser admitido |
+| Listo | Admitido y con memoria asignada; espera la CPU |
+| Listo y Suspendido | Admitido pero sin memoria disponible; espera que se libere un hueco |
+| En Ejecución | Ocupa la CPU |
+| Finalizado | Terminó; su memoria fue liberada |
+
+## Informe final
+
+Al terminar el último proceso se muestra, para cada proceso, el tiempo de finalización, el **tiempo de retorno** (`fin - arribo`) y el **tiempo de espera** (`retorno - irrupción`), y además:
+
+* Tiempo promedio de retorno.
+* Tiempo promedio de espera.
+* **Rendimiento del sistema** = trabajos terminados / tiempo total de la simulación (medido desde `t = 0`).
+
+## Decisiones de diseño
+
+La consigna no fija estos puntos, por lo que se adoptaron los siguientes criterios:
+
+* **Memoria:** el espacio libre es un único hueco al inicio. Al asignar con Best-Fit se elige el hueco libre más justo (a igual tamaño, el de menor dirección) y se lo divide en la partición del proceso y un hueco con el resto. Al liberar, los huecos libres contiguos se fusionan. Como cada partición se corta al tamaño exacto del proceso, la fragmentación interna es siempre 0; la columna `FRAG_EXTERNA` muestra el tamaño de cada hueco libre cuando la memoria no está totalmente libre.
+* **Admisión:** los procesos que arriban quedan primero en estado _Nuevo_ y se admiten por orden de llegada mientras haya menos de 5 procesos entre Ejecución, Listos y Listos y Suspendidos.
+* **Prioridad de memoria:** cuando se libera memoria, primero se intenta cargar a los Listos y Suspendidos (por orden de suspensión, pudiendo pasar uno más chico si el primero no entra) y luego se admiten Nuevos.
+* **SRTF:** solo compiten por la CPU los procesos en memoria (Listos). Un proceso en ejecución solo es desplazado si otro tiene un tiempo restante **estrictamente menor** (en un empate no hay cambio de contexto). Si hay varios candidatos con igual tiempo restante, se elige el de menor tiempo de arribo y luego el de menor ID.
+* **Tiempo:** unidades enteras; un proceso que arriba o termina en el instante `t` se atiende en ese mismo instante.
+
+## Lotes de prueba incluidos
+
+| Archivo | Qué prueba |
+|---|---|
+| `procesos_defecto.csv` | Lote de la opción 1 del menú: 10 procesos con apropiaciones SRTF, procesos en estado Nuevo y Listo y Suspendido, y memoria fragmentada |
+| `lote1.csv` | Procesos espaciados; CPU ociosa al inicio (primer arribo en `t = 3`) |
+| `lote2.csv` | 5 procesos en `t = 0` que no entran todos en memoria → Listo y Suspendido |
+| `lote3.csv` | Sistema completo (5 procesos): P8 queda en estado Nuevo; memoria fragmentada |
+| `lote4.csv` | 10 procesos con apropiaciones SRTF, Nuevos y Suspendidos |
+| `lote5.csv` | Un proceso de 451K (no entra en memoria): se descarta con aviso |
+| `lote6.csv` | 12 procesos: se ignoran P11 y P12 (máximo 10) |

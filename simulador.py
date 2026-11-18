@@ -484,4 +484,4 @@ def mostrar_menu():
 
 if __name__ == "__main__":
     mostrar_menu()
-    input("\nPresione Enter para salir...") # Comentario de prueba
+    input("\nPresione Enter para salir...")

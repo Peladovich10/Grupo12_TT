@@ -105,7 +105,7 @@ class GestorMemoria:
             else:
                 i += 1
 
-    def obtener_tabla_memoria_salida(self):
+   def obtener_tabla_memoria_salida(self):
         """Formatea las particiones para mostrarlas según el requerimiento especificado."""
         tabla = []
 
@@ -124,7 +124,7 @@ class GestorMemoria:
                 "dir_inicio": p["dir_inicio"],
                 "tam": p["tam"],
                 "id_proc": p["id_proc"],
-                "frag_ext": p["tam"] if p["id_proc"] is None else 0,
+                "frag_ext": p["tam"] if (p["id_proc"] is None and p["tam"] < self.tam_total) else 0,
             })
 
         return tabla

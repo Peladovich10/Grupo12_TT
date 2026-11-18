@@ -183,9 +183,10 @@ def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria, plu
     print("-" * 80)
 
     for p in procesos:
-        print(
-            f"{p['id']:<5} | {p['ta']:<5} | {p['ti']:<5} | {p['ti_rest']:<8} | {p['tam']:<8} | {estado_legible(p['est']):<20}"
-        )
+        if p["est"] != "-":
+            print(
+                f"{p['id']:<5} | {p['ta']:<5} | {p['ti']:<5} | {p['ti_rest']:<8} | {p['tam']:<8} | {estado_legible(p['est']):<20}"
+            )
     print("-" * 80)
 
     print("\n[TABLA DE MEMORIA - PARTICIONES VARIABLES]")
@@ -466,7 +467,9 @@ def ejecutar_simulacion(ruta_csv):
 
 def ejecutar_procesos_defecto():
     """Ejecuta la simulación utilizando el archivo por defecto."""
-    ejecutar_simulacion("procesos_defecto.csv")
+    ruta_base = os.path.dirname(os.path.abspath(__file__))
+    ruta_csv = os.path.join(ruta_base, "procesos_defecto.csv")
+    ejecutar_simulacion(ruta_csv)
 
 def cargar_archivo_csv():
     """Muestra los CSV disponibles en la carpeta raíz y permite elegir uno por número."""

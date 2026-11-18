@@ -105,7 +105,7 @@ class GestorMemoria:
             else:
                 i += 1
 
-   def obtener_tabla_memoria_salida(self):
+    def obtener_tabla_memoria_salida(self):
         """Formatea las particiones para mostrarlas según el requerimiento especificado."""
         tabla = []
 

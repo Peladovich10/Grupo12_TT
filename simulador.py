@@ -1,12 +1,19 @@
 import csv
 import os
 import sys
+from decimal import Decimal, ROUND_HALF_UP
 
 # Forzar la entrada y salida estándar de la consola a UTF-8
 if sys.stdout.encoding != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")
 if sys.stdin.encoding != "utf-8":
     sys.stdin.reconfigure(encoding="utf-8")
+
+# Parámetros del enunciado
+MEMORIA_SO = 100        # K reservados para el Sistema Operativo
+MEMORIA_USUARIO = 450   # K disponibles para procesos de usuario
+MAX_PROCESOS = 10       # máximo de procesos por simulación
+MAX_EN_SISTEMA = 5      # máximo entre Ejecución + Listos + Listos y Suspendidos
 
 def pausar_simulacion():
     """Pausa la ejecución y espera a que el usuario presione Enter."""
@@ -163,10 +170,11 @@ def estado_legible(est):
     }
     return mapa.get(est, est)
 
-def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
+def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria, plural=False):
     """Muestra el estado del sistema cuando ocurre un evento relevante."""
     print("\n" + "=" * 80)
-    print(f" TIEMPO t = {tiempo} | EVENTO: {evento_msg}")
+    etiqueta = "EVENTOS" if plural else "EVENTO"
+    print(f" TIEMPO t = {tiempo} | {etiqueta}: {evento_msg}")
     print("=" * 80)
 
     print("\n[TABLA GENERAL DE PROCESOS]")
@@ -175,10 +183,9 @@ def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
     print("-" * 80)
 
     for p in procesos:
-        if p["est"] != "-":
-            print(
-                f"{p['id']:<5} | {p['ta']:<5} | {p['ti']:<5} | {p['ti_rest']:<8} | {p['tam']:<8} | {estado_legible(p['est']):<20}"
-            )
+        print(
+            f"{p['id']:<5} | {p['ta']:<5} | {p['ti']:<5} | {p['ti_rest']:<8} | {p['tam']:<8} | {estado_legible(p['est']):<20}"
+        )
     print("-" * 80)
 
     print("\n[TABLA DE MEMORIA - PARTICIONES VARIABLES]")
@@ -196,8 +203,6 @@ def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
 
         frag_str = f"{part['frag_ext']}K" if part["frag_ext"] is not None else "-"
         print(
-            f"{part['id']:<8} | {part['dir_inicio']:<10} | {part['tam']:<12} | {id_proc_str:<8} | {frag_str:<12}"
-            if "id" in part else
             f"{part['id_part']:<8} | {part['dir_inicio']:<10} | {part['tam']:<12} | {id_proc_str:<8} | {frag_str:<12}"
         )
     print("-" * 80)
@@ -208,34 +213,61 @@ def cargar_procesos_desde_csv(ruta_csv):
     """Lee un archivo CSV y devuelve una lista de diccionarios de procesos."""
     procesos = []
     try:
+        # utf-8-sig: tolera archivos guardados con BOM (por ejemplo, desde Excel)
         with open(ruta_csv, mode="r", encoding="utf-8-sig") as f:
-             contenido = f.read(1024)
-             f.seek(0)
-             delimitador = ";" if ";" in contenido.splitlines()[0] else ","
-             reader = csv.DictReader(f, delimiter=delimitador)
-             for row in reader:
-                 row_limpia = {k.strip(): v.strip() for k, v in row.items() if k}
-                 if not row_limpia.get("ID"):
-                     continue
-                 procesos.append(
-                     {
-                         "id": int(row_limpia["ID"]),
-                         "ta": int(row_limpia["TA"]),
-                         "ti": int(row_limpia["TI"]),
-                         "ti_rest": int(row_limpia["TI"]),
-                         "tam": int(row_limpia["TAM(Kb)"]),
-                         "est": "-",
-                     }
-                 )
+            reader = csv.DictReader(f)
+            for row in reader:
+                procesos.append(
+                    {
+                        "id": int(row["ID"]),
+                        "ta": int(row["TA"]),
+                        "ti": int(row["TI"]),
+                        "ti_rest": int(row["TI"]),
+                        "tam": int(row["TAM(Kb)"]),
+                        "est": "-",
+                    }
+                )
     except FileNotFoundError:
         print(f"Error: No se encontró el archivo '{ruta_csv}'.")
-        input("Presione ENTER para volver al menú...")
         return None
     except Exception as e:
         print(f"Error al leer el archivo CSV: {e}")
-        input("Presione ENTER para volver al menú...")
         return None
-    return procesos
+
+    # Se permiten como máximo MAX_PROCESOS procesos por simulación.
+    if len(procesos) > MAX_PROCESOS:
+        ignorados = ", ".join(f"P{p['id']}" for p in procesos[MAX_PROCESOS:])
+        print(
+            f"\nAviso: el archivo tiene {len(procesos)} procesos y solo se permiten "
+            f"{MAX_PROCESOS} por simulación. Se ignoran: {ignorados}."
+        )
+        procesos = procesos[:MAX_PROCESOS]
+
+    # Un proceso que no entra en la memoria de usuario nunca podría ejecutarse
+    # (quedaría suspendido para siempre), y con TI <= 0 la simulación no terminaría.
+    validos = []
+    for p in procesos:
+        if p["tam"] > MEMORIA_USUARIO:
+            print(
+                f"\nAviso: P{p['id']} pide {p['tam']}K y la memoria para procesos es de "
+                f"{MEMORIA_USUARIO}K, nunca podría cargarse. Se descarta de la simulación."
+            )
+        elif p["ti"] <= 0 or p["tam"] <= 0 or p["ta"] < 0:
+            print(
+                f"\nAviso: P{p['id']} tiene datos inválidos (se requiere TA >= 0, TI > 0 y "
+                f"TAM > 0). Se descarta de la simulación."
+            )
+        else:
+            validos.append(p)
+
+    if not validos:
+        print("\nNo hay procesos válidos para simular.")
+        return None
+    return validos
+
+def redondear(valor, decimales):
+    """Redondea como se hace a mano (0.5 hacia arriba); format() redondea los empates hacia el par."""
+    return Decimal(valor).quantize(Decimal(1).scaleb(-decimales), rounding=ROUND_HALF_UP)
 
 def mostrar_informe_estadistico(procesos, tiempo_total):
     """Muestra el informe estadístico con tiempos de retorno, espera y rendimiento."""
@@ -257,21 +289,31 @@ def mostrar_informe_estadistico(procesos, tiempo_total):
         print(f"{p['id']:<5} | {p['ta']:<5} | {p['ti']:<5} | {p['tiempo_fin']:<8} | {ret:<12} | {esp:<10}")
 
     cant = len(procesos)
-    prom_retorno = sum_retorno / cant
-    prom_espera = sum_espera / cant
-    rendimiento = cant / tiempo_total if tiempo_total > 0 else 0
+    prom_retorno = Decimal(sum_retorno) / Decimal(cant)
+    prom_espera = Decimal(sum_espera) / Decimal(cant)
+    rendimiento = Decimal(cant) / Decimal(tiempo_total) if tiempo_total > 0 else Decimal(0)
 
     print("-" * 80)
-    print(f"Tiempo promedio de Retorno: {prom_retorno:.2f} unidades de tiempo")
-    print(f"Tiempo promedio de Espera : {prom_espera:.2f} unidades de tiempo")
-    print(f"Rendimiento del sistema   : {rendimiento:.4f} trabajos/unidad de tiempo")
+    print(f"Tiempo promedio de Retorno: {redondear(prom_retorno, 2)} unidades de tiempo")
+    print(f"Tiempo promedio de Espera : {redondear(prom_espera, 2)} unidades de tiempo")
+    print(f"Rendimiento del sistema   : {redondear(rendimiento, 4)} trabajos/unidad de tiempo")
     print("=" * 80 + "\n")
 
-def simular_srtf_y_memoria(procesos, ruta_csv):
-    memoria = GestorMemoria(tam_total=450, dir_inicio=100)
+def contar_en_sistema(proceso_en_ejecucion, cola_listos, cola_listos_suspendidos):
+    """Procesos en Ejecución + Listos + Listos y Suspendidos (tope: MAX_EN_SISTEMA)."""
+    return (
+        (1 if proceso_en_ejecucion else 0)
+        + len(cola_listos)
+        + len(cola_listos_suspendidos)
+    )
 
-    cola_nuevos = [p for p in procesos]
-    cola_nuevos.sort(key=lambda x: x["ta"])
+def simular_srtf_y_memoria(procesos, ruta_csv):
+    memoria = GestorMemoria(tam_total=MEMORIA_USUARIO, dir_inicio=MEMORIA_SO)
+
+    # Procesos que todavía no arribaron (el orden es estable: a igual TA se respeta el del archivo)
+    cola_por_arribar = sorted(procesos, key=lambda x: x["ta"])
+    # Procesos que ya arribaron pero no fueron admitidos porque el sistema está completo
+    cola_nuevos = []
 
     cola_listos = []
     cola_listos_suspendidos = []
@@ -296,43 +338,20 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
         if msg_fin_instante:
             hubo_evento = True
 
-        arribos_hoy = [p for p in cola_nuevos if p["ta"] == tiempo_actual]
+        # 1) Todo proceso que arriba queda primero en estado Nuevo (N).
+        arribos_hoy = [p for p in cola_por_arribar if p["ta"] == tiempo_actual]
         for p in arribos_hoy:
-            cola_nuevos.remove(p)
+            cola_por_arribar.remove(p)
             p["est"] = "N"
+            cola_nuevos.append(p)
 
-            procesos_en_sistema = (
-                (1 if proceso_en_ejecucion else 0)
-                + len(cola_listos)
-                + len(cola_listos_suspendidos)
-            )
-
-            memoria_asignada = memoria.asignar_best_fit(p["id"], p["tam"])
-
-            if memoria_asignada and procesos_en_sistema < 5:
-                p["est"] = "L"
-                cola_listos.append(p)
-                mensajes_evento.append(f"Arribo de P{p['id']}: Asignado a Memoria -> Cola de Listos (L)")
-            else:
-                if memoria_asignada:
-                    memoria.liberar_memoria(p["id"])
-
-                p["est"] = "S"
-                cola_listos_suspendidos.append(p)
-                mensajes_evento.append(f"Arribo de P{p['id']}: Sin cupo/memoria -> Cola de Listos/Suspendidos (S)")
-
-            hubo_evento = True
-
+        # 2) Los Listos y Suspendidos ya forman parte del sistema, así que tienen
+        #    prioridad sobre los Nuevos para ocupar la memoria que haya disponible.
         i = 0
         while i < len(cola_listos_suspendidos):
             p_susp = cola_listos_suspendidos[i]
-            procesos_en_sistema = (
-                (1 if proceso_en_ejecucion else 0)
-                + len(cola_listos)
-                + len(cola_listos_suspendidos)
-            )
 
-            if procesos_en_sistema <= 5 and memoria.asignar_best_fit(p_susp["id"], p_susp["tam"]):
+            if memoria.asignar_best_fit(p_susp["id"], p_susp["tam"]):
                 cola_listos_suspendidos.pop(i)
                 p_susp["est"] = "L"
                 cola_listos.append(p_susp)
@@ -341,13 +360,40 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
             else:
                 i += 1
 
-        candidatos_cpu = [p for p in cola_listos]
-        if proceso_en_ejecucion:
-            candidatos_cpu.append(proceso_en_ejecucion)
+        # 3) Admisión de los Nuevos (por orden de llegada) mientras haya lugar:
+        #    Ejecución + Listos + Listos y Suspendidos nunca puede superar MAX_EN_SISTEMA.
+        while cola_nuevos and contar_en_sistema(
+            proceso_en_ejecucion, cola_listos, cola_listos_suspendidos
+        ) < MAX_EN_SISTEMA:
+            p = cola_nuevos.pop(0)
+            origen = "Arribo" if p["ta"] == tiempo_actual else "Admisión"
 
-        if candidatos_cpu:
-            candidatos_cpu.sort(key=lambda x: (x["ti_rest"], x["ta"], x["id"]))
-            siguiente_cpu = candidatos_cpu[0]
+            if memoria.asignar_best_fit(p["id"], p["tam"]):
+                p["est"] = "L"
+                cola_listos.append(p)
+                mensajes_evento.append(f"{origen} de P{p['id']}: Asignado a Memoria -> Cola de Listos (L)")
+            else:
+                p["est"] = "S"
+                cola_listos_suspendidos.append(p)
+                mensajes_evento.append(f"{origen} de P{p['id']}: Sin memoria -> Cola de Listos/Suspendidos (S)")
+
+            hubo_evento = True
+
+        # Los que arribaron en este instante y no pudieron ser admitidos siguen en Nuevo.
+        for p in arribos_hoy:
+            if p["est"] == "N":
+                mensajes_evento.append(
+                    f"Arribo de P{p['id']}: Sistema completo ({MAX_EN_SISTEMA} procesos) -> queda en estado Nuevo (N)"
+                )
+                hubo_evento = True
+
+        # 4) Planificación SRTF: solo compiten los procesos que están en memoria (Listos).
+        #    El proceso en ejecución solo es desplazado si otro tiene un tiempo restante
+        #    estrictamente menor (en un empate no hay cambio de contexto).
+        if cola_listos:
+            siguiente_cpu = min(
+                cola_listos, key=lambda x: (x["ti_rest"], x["ta"], x["id"])
+            )
 
             if proceso_en_ejecucion is None:
                 proceso_en_ejecucion = siguiente_cpu
@@ -355,7 +401,7 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
                 proceso_en_ejecucion["est"] = "E"
                 mensajes_evento.append(f"CPU asignada a P{proceso_en_ejecucion['id']} (E)")
                 hubo_evento = True
-            elif siguiente_cpu["id"] != proceso_en_ejecucion["id"]:
+            elif siguiente_cpu["ti_rest"] < proceso_en_ejecucion["ti_rest"]:
                 proceso_anterior = proceso_en_ejecucion
                 proceso_anterior["est"] = "L"
                 cola_listos.append(proceso_anterior)
@@ -484,4 +530,4 @@ def mostrar_menu():
 
 if __name__ == "__main__":
     mostrar_menu()
-    input("\nPresione Enter para salir...") # Comentario de prueba
+    input("\nPresione Enter para salir...")

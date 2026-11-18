@@ -163,12 +163,23 @@ def estado_legible(est):
     }
     return mapa.get(est, est)
 
-def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria, plural=False):
+def mostrar_tablas_evento(tiempo, evento_msg, procesos, particiones_memoria):
     """Muestra el estado del sistema cuando ocurre un evento relevante."""
     print("\n" + "=" * 80)
-    etiqueta = "EVENTOS" if plural else "EVENTO"
-    print(f" TIEMPO t = {tiempo} | {etiqueta}: {evento_msg}")
+    print(f" TIEMPO t = {tiempo} | EVENTO: {evento_msg}")
     print("=" * 80)
+
+    print("\n[TABLA GENERAL DE PROCESOS]")
+    print("-" * 80)
+    print(f"{'ID':<5} | {'TA':<5} | {'TI':<5} | {'TI_REST':<8} | {'TAM(Kb)':<8} | {'EST':<20}")
+    print("-" * 80)
+
+    for p in procesos:
+        if p["est"] != "-":
+            print(
+                f"{p['id']:<5} | {p['ta']:<5} | {p['ti']:<5} | {p['ti_rest']:<8} | {p['tam']:<8} | {estado_legible(p['est']):<20}"
+            )
+    print("-" * 80)
 
     print("\n[TABLA GENERAL DE PROCESOS]")
     print("-" * 80)

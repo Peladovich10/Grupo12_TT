@@ -1,6 +1,6 @@
 # HowTo - Simulador de Asignación de Memoria y Planificación de Procesos
 
-**Grupo 12** — Integrantes:
+**Grupo 12**:
 
 Simulador de un sistema monoprocesador con memoria de **particiones variables (MVT)**, política de asignación **Best-Fit** y planificación de CPU **SRTF**.
 

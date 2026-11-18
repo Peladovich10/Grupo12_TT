@@ -208,24 +208,32 @@ def cargar_procesos_desde_csv(ruta_csv):
     """Lee un archivo CSV y devuelve una lista de diccionarios de procesos."""
     procesos = []
     try:
-        with open(ruta_csv, mode="r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                procesos.append(
-                    {
-                        "id": int(row["ID"]),
-                        "ta": int(row["TA"]),
-                        "ti": int(row["TI"]),
-                        "ti_rest": int(row["TI"]),
-                        "tam": int(row["TAM(Kb)"]),
-                        "est": "-",
-                    }
-                )
+        with open(ruta_csv, mode="r", encoding="utf-8-sig") as f:
+             contenido = f.read(1024)
+             f.seek(0)
+             delimitador = ";" if ";" in contenido.splitlines()[0] else ","
+             reader = csv.DictReader(f, delimiter=delimitador)
+             for row in reader:
+                 row_limpia = {k.strip(): v.strip() for k, v in row.items() if k}
+                 if not row_limpia.get("ID"):
+                     continue
+                 procesos.append(
+                     {
+                         "id": int(row_limpia["ID"]),
+                         "ta": int(row_limpia["TA"]),
+                         "ti": int(row_limpia["TI"]),
+                         "ti_rest": int(row_limpia["TI"]),
+                         "tam": int(row_limpia["TAM(Kb)"]),
+                         "est": "-",
+                     }
+                 )
     except FileNotFoundError:
         print(f"Error: No se encontró el archivo '{ruta_csv}'.")
+        input("Presione ENTER para volver al menú...")
         return None
     except Exception as e:
         print(f"Error al leer el archivo CSV: {e}")
+        input("Presione ENTER para volver al menú...")
         return None
     return procesos
 

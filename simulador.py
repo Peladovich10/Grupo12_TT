@@ -118,17 +118,13 @@ class GestorMemoria:
             "frag_ext": 0,
         })
 
-        espacio_libre_total = sum(
-            p["tam"] for p in self.particiones if p["id_proc"] is None
-        )
-
         for p in self.particiones:
             tabla.append({
                 "id_part": p["id_part"],
                 "dir_inicio": p["dir_inicio"],
                 "tam": p["tam"],
                 "id_proc": p["id_proc"],
-                "frag_ext": espacio_libre_total if p["id_proc"] is None else 0,
+                "frag_ext": p["tam"] if p["id_proc"] is None else 0,
             })
 
         return tabla

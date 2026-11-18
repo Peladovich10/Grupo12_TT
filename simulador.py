@@ -322,7 +322,7 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
     total_procesos = len(procesos)
 
     imprimir_leyendas_globales()
-    print(f"\n========== INICIANDO SIMULACIÓN DESDE '{ruta_csv}' ==========")
+    print(f"\n========== INICIANDO SIMULACIÓN DESDE '{os.path.basename(ruta_csv)}' ==========")
 
     while procesos_completados < total_procesos:
         hubo_evento = False
@@ -411,7 +411,7 @@ def simular_srtf_y_memoria(procesos, ruta_csv):
                 hubo_evento = True
 
         if hubo_evento:
-            msg_unificado = " | ".join(mensajes_evento)
+            msg_unificado = "\n".join(mensajes_evento)
             if msg_fin_instante:
                 if msg_unificado:
                     msg_unificado = msg_fin_instante + "\n" + msg_unificado
